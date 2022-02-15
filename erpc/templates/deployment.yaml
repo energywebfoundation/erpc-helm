@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "erpc.fullname" . }}
+  labels:
+    {{- include "erpc.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "erpc.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "erpc.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "erpc.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http /nethermind/
+          #command: ["./Nethermind.Runner", "--help"]
+          args: ["--config", "energyweb"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+          - name: config-volume
+            mountPath: nethermind/configs/energyweb.cfg
+            subPath: energyweb.cfg
+          - name: config-volume
+            mountPath: nethermind/chainspec/energyweb.json
+            subPath: energyweb.json
+          {{- if or .Values.pvc.enabled .Values.existingClaim.enabled }}
+          {{- if .Values.pvc.enabled }}
+          - mountPath: {{ .Values.pvc.mountPath | quote }}
+            name: volume
+            subPath: database/energyweb
+          {{- end }}
+          {{- if .Values.existingClaim.enabled }}
+          - mountPath: {{ .Values.existingClaim.mountPath | quote }}
+            name: existingclaim
+          {{- end }}
+          {{- end }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "erpc.fullname" . }}-config
+        {{- if or .Values.pvc.enabled .Values.existingClaim.enabled }}
+        {{- if .Values.pvc.enabled }}
+        - name: volume
+          persistentVolumeClaim:
+            claimName: {{ include "erpc.fullname" . }}
+        {{- end }}
+        {{- if .Values.existingClaim.enabled }}
+        - name: existingclaim
+          persistentVolumeClaim:
+            claimName: {{ .Values.existingClaim.claimName | quote }}
+        {{- end }}
+        {{- end }}
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

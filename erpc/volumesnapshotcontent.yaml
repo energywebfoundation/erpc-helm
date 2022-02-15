@@ -1,0 +1,14 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotContent
+metadata:
+  name: static-snapshot-content-g
+spec:
+  volumeSnapshotRef:
+    kind: VolumeSnapshot
+    name: static-snapshot-demo-g
+    namespace: erpc 
+  source:
+    snapshotHandle: snap-09e5cf1e8b70b6a93
+  driver: ebs.csi.aws.com
+  deletionPolicy: Delete
+  volumeSnapshotClassName: csi-aws-vsc

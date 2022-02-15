@@ -1,0 +1,20 @@
+
+{{- if .Values.pvc.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "erpc.fullname" . }}
+  labels:
+    {{- include "erpc.labels" . | nindent 4 }}
+spec:
+  storageClassName: {{ .Values.pvc.storageClassName | quote }}
+  accessModes:
+    - {{ .Values.pvc.accessMode | quote }}
+  resources:
+    requests:
+      storage: {{ .Values.pvc.capacity | quote }}
+  dataSource:
+    name: static-snapshot-demo-g
+    kind: VolumeSnapshot
+    apiGroup: snapshot.storage.k8s.io
+{{- end }}
