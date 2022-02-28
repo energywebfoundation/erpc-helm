@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "erpc.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
-  replicas: {{ .Values.replicaCount }}
-  {{- end }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "erpc.selectorLabels" . | nindent 6 }}
@@ -35,8 +33,19 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           ports:
             - name: http
-              containerPort: 80
+              containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
+            {{- if .Values.client.webSocketEnabled }}
+            - name: ws
+              containerPort: {{ .Values.service.wsPort }}
+              protocol: TCP
+            {{- end }}
+            - name: discovery-tcp
+              containerPort: {{ .Values.service.discoveryPort }}
+              protocol: TCP
+            - name: discovery-udp
+              containerPort: {{ .Values.service.discoveryPort }}
+              protocol: UDP
           # livenessProbe:
           #   httpGet:
           #     path: /
@@ -46,21 +55,21 @@ spec:
           #     path: /
           #     port: http /nethermind/
           #command: ["./Nethermind.Runner", "--help"]
-          args: ["--config", "energyweb"]
+          args: ["--config", {{ .Values.client.chain | quote }}]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
           - name: config-volume
-            mountPath: nethermind/configs/energyweb.cfg
-            subPath: energyweb.cfg
+            mountPath: "nethermind/configs/{{ include "chain.configName" . }}"
+            subPath: {{ include "chain.configName" . }}
           - name: config-volume
-            mountPath: nethermind/chainspec/energyweb.json
-            subPath: energyweb.json
-          {{- if or .Values.pvc.enabled .Values.existingClaim.enabled }}
-          {{- if .Values.pvc.enabled }}
-          - mountPath: {{ .Values.pvc.mountPath | quote }}
-            name: volume
-            subPath: database/energyweb
+            mountPath: "nethermind/chainspec/{{ include "chain.specName" . }}"
+            subPath: {{ include "chain.specName" . }}
+          {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
+          {{- if .Values.snapshotUse.enabled }}
+          - mountPath: {{ include "pvc.dbMountPath" . | quote }}
+            name: db-volume
+            subPath: database/{{ .Values.client.chain }}
           {{- end }}
           {{- if .Values.existingClaim.enabled }}
           - mountPath: {{ .Values.existingClaim.mountPath | quote }}
@@ -71,11 +80,11 @@ spec:
         - name: config-volume
           configMap:
             name: {{ include "erpc.fullname" . }}-config
-        {{- if or .Values.pvc.enabled .Values.existingClaim.enabled }}
-        {{- if .Values.pvc.enabled }}
-        - name: volume
+        {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
+        {{- if .Values.snapshotUse.enabled }}
+        - name: db-volume
           persistentVolumeClaim:
-            claimName: {{ include "erpc.fullname" . }}
+            claimName: {{ include "erpc.PVCName" . }}
         {{- end }}
         {{- if .Values.existingClaim.enabled }}
         - name: existingclaim

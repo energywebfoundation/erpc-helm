@@ -7,9 +7,23 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
-      targetPort: http
+    - port: {{ .Values.service.httpPort }}
+      targetPort: {{ .Values.service.httpPort }}
       protocol: TCP
       name: http
+      {{- if .Values.client.webSocketEnabled }}
+    - port: {{ .Values.service.wsPort }}
+      targetPort: {{ .Values.service.wsPort }}
+      protocol: TCP
+      name: ws
+      {{- end }}
+    - port: {{ .Values.service.discoveryPort }}
+      targetPort: {{ .Values.service.discoveryPort }}
+      protocol: TCP
+      name: discovery-tcp
+    - port: {{ .Values.service.discoveryPort }}
+      targetPort: {{ .Values.service.discoveryPort }}
+      protocol: UDP
+      name: discovery-udp
   selector:
     {{- include "erpc.selectorLabels" . | nindent 4 }}

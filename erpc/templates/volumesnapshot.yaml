@@ -1,0 +1,13 @@
+{{- if .Values.snapshotUse.enabled }}
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: {{ include "erpc.volumeSnapshotName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "erpc.labels" . | nindent 4 }}
+spec:
+  volumeSnapshotClassName: {{ include "erpc.volumeSnapshotClassName" . }}
+  source:
+    volumeSnapshotContentName: {{ include "erpc.volumeSnapshotContentName" . }}
+{{- end }}

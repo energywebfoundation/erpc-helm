@@ -60,3 +60,70 @@ Create the name of the service account to use
 {{- default "default" .Values.serviceAccount.name }}
 {{- end }}
 {{- end }}
+
+{{/*
+Create VolumeSnapshotClass name
+*/}}
+{{- define "erpc.volumeSnapshotClassName" -}}
+{{- printf "%s-volume-snapshot-class" (include "erpc.fullname" .) }}
+{{- end }}
+
+{{/*
+Create VolumeSnapshot name
+*/}}
+{{- define "erpc.volumeSnapshotName" -}}
+{{- printf "%s-volume-snapshot" (include "erpc.fullname" .) }}
+{{- end }}
+
+{{/*
+Create VolumeSnapshotContent name
+*/}}
+{{- define "erpc.volumeSnapshotContentName" -}}
+{{- printf "%s-volume-snapshot-content" (include "erpc.fullname" .) }}
+{{- end }}
+
+{{/*
+Create PVC name
+*/}}
+{{- define "erpc.PVCName" -}}
+{{- printf "%s-pvc" (include "erpc.fullname" .) }}
+{{- end }}
+
+{{/*
+Create chain config name
+*/}}
+{{- define "chain.configName" -}}
+{{- printf "%s.cfg" .Values.client.chain }}
+{{- end }}
+
+{{/*
+Create chain spec name
+*/}}
+{{- define "chain.specName" -}}
+{{- printf "%s.json" .Values.client.chain }}
+{{- end }}
+
+{{/*
+Chain sync mode
+*/}}
+{{- define "chain.syncMode" -}}
+{{- if .Values.client.fastSync }}
+{{- default "Fast" }}
+{{- else }}
+{{- default "Archive" }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create chain node name
+*/}}
+{{- define "chain.nodeName" -}}
+{{- printf "%s %s ERPC" .Values.client.chain (include "chain.syncMode" .) | title | quote }}
+{{- end }}
+
+{{/*
+Create PVC DB mount path
+*/}}
+{{- define "pvc.dbMountPath" -}}
+{{- printf "%s/%s" .Values.pvc.mountPathPrefix .Values.client.chain }}
+{{- end }}

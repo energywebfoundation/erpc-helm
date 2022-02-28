@@ -1,0 +1,10 @@
+{{- if .Values.snapshotUse.enabled }}
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: {{ include "erpc.volumeSnapshotClassName" . }}
+  labels:
+    {{- include "erpc.labels" . | nindent 4 }}
+driver: ebs.csi.aws.com
+deletionPolicy: Delete
+{{- end }}

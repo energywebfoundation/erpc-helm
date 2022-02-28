@@ -8,7 +8,7 @@ image:
   repository: nethermind/nethermind
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "1.12.4"
 
 imagePullSecrets: []
 nameOverride: ""
@@ -38,7 +38,9 @@ securityContext: {}
 
 service:
   type: ClusterIP
-  port: 80
+  httpPort: 8545
+  wsPort: 8546
+  discoveryPort: 30303
 
 ingress:
   enabled: false
@@ -68,27 +70,39 @@ resources: {}
   #   cpu: 100m
   #   memory: 128Mi
 
-autoscaling:
-  enabled: false
-  minReplicas: 1
-  maxReplicas: 100
-  targetCPUUtilizationPercentage: 80
-  # targetMemoryUtilizationPercentage: 80
-
 nodeSelector: {}
 
 tolerations: []
 
 affinity: {}
 
+snapshotUse:
+  enabled: true
+  ebsSnapshotId: snap-07165473a56af2221
+  snapshotSize: 250Gi
+
 pvc:
   enabled: true
-  storageClassName: ebs-sc
+  storageClassName: erpc-sc
   accessMode: ReadWriteOnce
-  capacity: 100Gi
-  mountPath: /nethermind/nethermind_db/energyweb
+  volumeSize: 250Gi
+  mountPathPrefix: /nethermind/nethermind_db
 
 existingClaim:
   enabled: false
   claimName: my-claim
   mountPath: /nethermind/nethermind_db
+
+client:
+  fastSync: true
+  webSocketEnabled: true
+  chain: energyweb
+  genesisHash: 0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b
+  pivotNumber: 16400000
+  pivotHash: 0x1c62742497b3d0eb286589b9caf0d895f3aa0466978b44f55fb6f3e8030ccd07
+  pivotTotalDifficulty: "5580630817503390800799343561880998667533141730"
+  # chain: volta
+  # genesisHash: 0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5
+  # pivotNumber: 16010000
+  # pivotHash: 0x14dbcf707c72a55872b3cb30be6f1333a3ac7d0ed458ac7e5dea951af1513fe0
+  # pivotTotalDifficulty: "5447920694404224800048627464982609065065693091"

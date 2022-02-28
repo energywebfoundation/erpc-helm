@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: {{ include "erpc.fullname" . }}
+  name: {{ include "erpc.PVCName" . }}
   labels:
     {{- include "erpc.labels" . | nindent 4 }}
 spec:
@@ -12,9 +12,15 @@ spec:
     - {{ .Values.pvc.accessMode | quote }}
   resources:
     requests:
-      storage: {{ .Values.pvc.capacity | quote }}
+      {{- if .Values.snapshotUse.enabled }}
+      storage: {{ .Values.snapshotUse.snapshotSize | quote }}
+      {{- else }}
+      storage: {{ .Values.pvc.volumeSize | quote }}
+      {{- end }}
+  {{- if .Values.snapshotUse.enabled }}
   dataSource:
-    name: static-snapshot-demo-g
+    name: {{ include "erpc.volumeSnapshotName" . }}
     kind: VolumeSnapshot
     apiGroup: snapshot.storage.k8s.io
+  {{- end }}
 {{- end }}
