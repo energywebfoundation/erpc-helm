@@ -1,29 +1,88 @@
+{{ $fullname :=  include "erpc.fullname" . }}
+{{ $selectorLabels :=  include "erpc.selectorLabels" .  }}
+{{ $serviceLabels :=  include "erpc.serviceLabels" .  }}
+{{ $labels := include "erpc.labels" . }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ include "erpc.fullname" . }}
+  name: {{ $fullname }}
   labels:
-    {{- include "erpc.labels" . | nindent 4 }}
+    {{- $labels | nindent 4 }}
 spec:
-  type: {{ .Values.service.type }}
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    {{- $selectorLabels | nindent 4 }}
   ports:
     - port: {{ .Values.service.httpPort }}
       targetPort: {{ .Values.service.httpPort }}
       protocol: TCP
       name: http
-      {{- if .Values.client.webSocketEnabled }}
+      {{- if .Values.node.webSocketEnabled }}
     - port: {{ .Values.service.wsPort }}
       targetPort: {{ .Values.service.wsPort }}
       protocol: TCP
       name: ws
       {{- end }}
-    - port: {{ .Values.service.discoveryPort }}
-      targetPort: {{ .Values.service.discoveryPort }}
+    - port: {{ .Values.service.p2pPort }}
+      targetPort: {{ .Values.service.p2pPort }}
       protocol: TCP
-      name: discovery-tcp
+      name: p2p-tcp
     - port: {{ .Values.service.discoveryPort }}
       targetPort: {{ .Values.service.discoveryPort }}
       protocol: UDP
       name: discovery-udp
+---
+{{range $i := until (.Values.node.replicas | int) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $fullname }}-{{ $i }}
+  labels:
+    {{- $serviceLabels | nindent 4 }}
+    node: {{ $fullname }}-{{ $i }}
+    instance: {{ $fullname }}-{{ $i }}
+  annotations:
+    {{- if eq $.Values.service.type "NodePort" }}
+    service.beta.kubernetes.io/aws-load-balancer-type: "external"
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+    service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "tcp"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-port: {{ $.Values.service.p2pPort | quote }}
+    service.beta.kubernetes.io/aws-load-balancer-manage-backend-security-group-rules: "true"
+    service.beta.kubernetes.io/aws-load-balancer-attributes: "load_balancing.cross_zone.enabled=true"
+    {{- else }}
+    {{- toYaml $.Values.service.annotations | nindent 4 }}
+    {{- end }}
+spec:
+  {{- if eq $.Values.service.type "NodePort" }}
+  type: NodePort
+  externalTrafficPolicy: Local
+  {{- else if eq $.Values.service.type "ClusterIP" }}
+  type: ClusterIP
+  clusterIP: None
+  {{- end }}
+  ports:
+    - port: {{ $.Values.service.httpPort }}
+      targetPort: {{ $.Values.service.httpPort }}
+      protocol: TCP
+      name: http
+      {{- if $.Values.node.webSocketEnabled }}
+    - port: {{ $.Values.service.wsPort }}
+      targetPort: {{ $.Values.service.wsPort }}
+      protocol: TCP
+      name: ws
+      {{- end }}
+    - port: {{ $.Values.service.p2pPort }}
+      targetPort: {{ $.Values.service.p2pPort }}
+      protocol: TCP
+      name: p2p-tcp
+    - port: {{ $.Values.service.discoveryPort }}
+      targetPort: {{ $.Values.service.discoveryPort }}
+      protocol: UDP
+      name: discovery-udp
   selector:
-    {{- include "erpc.selectorLabels" . | nindent 4 }}
+    {{- $selectorLabels | nindent 4 }}
+    statefulset.kubernetes.io/pod-name: {{ $fullname }}-{{ $i }}
+---
+{{ end }}

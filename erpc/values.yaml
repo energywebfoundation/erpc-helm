@@ -2,13 +2,21 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-replicaCount: 1
-
 image:
   repository: nethermind/nethermind
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.12.4"
+  tag: "1.12.8"
+
+initContainer:
+  image:
+    repository: crazymax/7zip
+    tag: latest
+
+kubectl:
+  image:
+    repository: bitnami/kubectl
+    tag: latest
 
 imagePullSecrets: []
 nameOverride: ""
@@ -17,6 +25,8 @@ fullnameOverride: ""
 serviceAccount:
   # Specifies whether a service account should be created
   create: true
+  # Specifies whether a RoleBinding should be created for service account
+  createRoleBinding: true
   # Annotations to add to the service account
   annotations: {}
   # The name of the service account to use.
@@ -37,10 +47,12 @@ securityContext: {}
   # runAsUser: 1000
 
 service:
-  type: ClusterIP
+  type: NodePort
+  annotations: {}
   httpPort: 8545
   wsPort: 8546
-  discoveryPort: 30303
+  discoveryPort: 30304
+  p2pPort: 30303
 
 ingress:
   enabled: false
@@ -78,12 +90,11 @@ affinity: {}
 
 snapshotUse:
   enabled: true
-  ebsSnapshotId: snap-07165473a56af2221
+  ebsSnapshotId: snap-078ccc2fe56cb7abe
   snapshotSize: 250Gi
 
 pvc:
-  enabled: true
-  storageClassName: erpc-sc
+  storageClassName: erpc-sc-io1
   accessMode: ReadWriteOnce
   volumeSize: 250Gi
   mountPathPrefix: /nethermind/nethermind_db
@@ -93,10 +104,12 @@ existingClaim:
   claimName: my-claim
   mountPath: /nethermind/nethermind_db
 
-client:
+node:
   fastSync: true
   webSocketEnabled: true
-  chain: energyweb
+  chain: "energyweb"
+  replicas: 1
+  chainspecURL: https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json
   genesisHash: 0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b
   pivotNumber: 16400000
   pivotHash: 0x1c62742497b3d0eb286589b9caf0d895f3aa0466978b44f55fb6f3e8030ccd07
@@ -106,3 +119,7 @@ client:
   # pivotNumber: 16010000
   # pivotHash: 0x14dbcf707c72a55872b3cb30be6f1333a3ac7d0ed458ac7e5dea951af1513fe0
   # pivotTotalDifficulty: "5447920694404224800048627464982609065065693091"
+
+# Add extra labels on pods and services
+#extraLabels:
+#  type: rpc

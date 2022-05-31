@@ -1,0 +1,171 @@
+{{ $fullname := include "erpc.fullname" . }}
+{{ $selectorLabels :=  include "erpc.selectorLabels" . }}
+{{ $serviceAccountName :=  include "erpc.serviceAccountName" . }}
+{{ $chainspecName := include "chain.specName" . }}
+{{ $chainConfig := include "chain.configName" . }}
+{{ $labels := include "erpc.labels" . }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ $fullname }}
+  labels:
+    {{- $labels | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- $selectorLabels | nindent 6 }}
+  replicas: {{ .Values.node.replicas | int }}
+  serviceName: {{ $fullname }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "erpc.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ $serviceAccountName }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: download-chainspec
+          image: {{ .Values.initContainer.image.repository }}:{{ .Values.initContainer.image.tag }}
+          command: [ "/bin/sh" ]
+          args:
+            - -c
+            - |
+              wget -O /tmp/nethermind/chainspec/{{ $chainspecName }} {{ .Values.node.chainspecURL }}
+          volumeMounts:
+            - name: chainspec-data
+              mountPath: "/tmp/nethermind/chainspec"
+        - name: get-ext-ip
+          image: {{ .Values.kubectl.image.repository }}:{{ .Values.kubectl.image.tag }}
+          command: [ "/bin/sh" ]
+          args:
+            - -c
+            - |
+              sleep 10
+              POD_INDEX="${HOSTNAME##*-}"
+              NLB_HOST="$(kubectl -n {{ .Release.Namespace }} get service {{ $fullname }}-${POD_INDEX} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
+              echo "NLB host: ${NLB_HOST}"
+              echo "${NLB_HOST}" > /tmp/nethermind/chainspec/nlb-ip  
+              while [ -z "${NLB_IP}" ]; do echo "Searching for NLB IP...."; sleep 5; NLB_IP="$(curl -vs --connect-timeout 1 ${NLB_HOST} 2>&1 | grep -i trying | awk '{print substr( $3, 0, length($3)-2)}' | head -n 1)"; done
+              echo "NLB IP: ${NLB_IP}"
+              echo "${NLB_IP}" > /tmp/nethermind/chainspec/nlb-ip
+          volumeMounts:
+            - name: chainspec-data
+              mountPath: "/tmp/nethermind/chainspec"
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.httpPort }}
+              protocol: TCP
+            {{- if .Values.node.webSocketEnabled }}
+            - name: ws
+              containerPort: {{ .Values.service.wsPort }}
+              protocol: TCP
+            {{- end }}
+            - name: p2p-tcp
+              containerPort: {{ .Values.service.p2pPort }}
+              protocol: TCP
+            - name: discovery-udp
+              containerPort: {{ .Values.service.discoveryPort }}
+              protocol: UDP
+          # livenessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http
+          # readinessProbe:
+          #   httpGet:
+          #     path: /
+          #     port: http /nethermind/
+          #command: ["./Nethermind.Runner", "--help"]
+          command: [ "/bin/sh" ]
+          args: 
+            - -c
+            - |
+              EXT_IP="$(cat /nethermind/chainspec/nlb-ip)"
+              ./Nethermind.Runner --config {{ .Values.node.chain | quote }} --Network.ExternalIp ${EXT_IP}
+          # --Network.ExternalIp $(cat nethermind/chainspec/extip)
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config-volume
+              mountPath: "nethermind/configs/{{ $chainConfig }}"
+              subPath: {{ $chainConfig }}
+            - name: chainspec-data
+              mountPath: "nethermind/chainspec"
+            {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
+            {{- if .Values.snapshotUse.enabled }}
+            - mountPath: {{ include "pvc.dbMountPath" . | quote }}
+              name: db-volume
+              subPath: database/{{ .Values.node.chain }}
+            {{- end }}
+            {{- if .Values.existingClaim.enabled }}
+            - mountPath: {{ .Values.existingClaim.mountPath | quote }}
+              name: existingclaim
+            {{- end }}
+            {{- end }}
+      volumes:
+        - name: config-volume
+          configMap:
+            name: {{ include "erpc.fullname" . }}
+        {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
+        {{- if .Values.snapshotUse.enabled }}
+        - name: db-volume
+          # persistentVolumeClaim:
+          #   claimName: {{ include "erpc.PVCName" . }}
+        {{- end }}
+        {{- if .Values.existingClaim.enabled }}
+        - name: existingclaim
+          persistentVolumeClaim:
+            claimName: {{ .Values.existingClaim.claimName | quote }}
+        {{- end }}
+        {{- end }}
+        - name: chainspec-data
+          emptyDir: {}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: db-volume
+        labels:
+          {{- $labels | nindent 10 }}
+      spec:
+        storageClassName: {{ .Values.pvc.storageClassName | quote }}
+        accessModes: [ {{ .Values.pvc.accessMode | quote }} ]
+        resources:
+          requests:
+            {{- if .Values.snapshotUse.enabled }}
+            storage: {{ .Values.snapshotUse.snapshotSize | quote }}
+            {{- else }}
+            storage: {{ .Values.pvc.volumeSize | quote }}
+            {{- end }}
+        {{- if .Values.snapshotUse.enabled }}
+        dataSource:
+          name: {{ include "erpc.volumeSnapshotName" . }}
+          kind: VolumeSnapshot
+          apiGroup: snapshot.storage.k8s.io
+        {{- end }}

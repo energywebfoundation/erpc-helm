@@ -36,10 +36,13 @@ Common labels
 {{- define "erpc.labels" -}}
 helm.sh/chart: {{ include "erpc.chart" . }}
 {{ include "erpc.selectorLabels" . }}
+{{ include "erpc.serviceLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
+chain: {{ .Values.node.chain }}
+mode: {{ include "chain.syncMode" . }} 
 {{- end }}
 
 {{/*
@@ -48,6 +51,18 @@ Selector labels
 {{- define "erpc.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "erpc.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Service labels
+*/}}
+{{- define "erpc.serviceLabels" -}}
+chain: {{ .Values.node.chain | quote }}
+release: {{ .Release.Name | quote }}
+mode: {{ include "chain.syncMode" . | quote }}
+{{- with .Values.extraLabels }}
+{{ toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
@@ -62,24 +77,38 @@ Create the name of the service account to use
 {{- end }}
 
 {{/*
+Generate pseudo random value based on EBS snapshot ID
+*/}}
+{{- define "erpc.uuid" -}}
+{{- trimPrefix "snap-" .Values.snapshotUse.ebsSnapshotId -}}
+{{- end }}
+
+{{/*
+Create ConfigMap name to store Volimesnapshot related names
+*/}}
+{{- define "erpc.volumeSnapshotConfigMapName" -}}
+{{ printf "%s-snapshot-config" (include "erpc.fullname" .) }}
+{{- end }}
+
+{{/*
 Create VolumeSnapshotClass name
 */}}
 {{- define "erpc.volumeSnapshotClassName" -}}
-{{- printf "%s-volume-snapshot-class" (include "erpc.fullname" .) }}
+{{- printf "%s-vs-class-%s" (include "erpc.fullname" .) (include "erpc.uuid" .) | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create VolumeSnapshot name
 */}}
 {{- define "erpc.volumeSnapshotName" -}}
-{{- printf "%s-volume-snapshot" (include "erpc.fullname" .) }}
+{{- printf "%s-vs-%s" (include "erpc.fullname" .) (include "erpc.uuid" .) | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Create VolumeSnapshotContent name
 */}}
 {{- define "erpc.volumeSnapshotContentName" -}}
-{{- printf "%s-volume-snapshot-content" (include "erpc.fullname" .) }}
+{{- printf "%s-vs-content-%s" (include "erpc.fullname" .) (include "erpc.uuid" .) | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
@@ -93,21 +122,21 @@ Create PVC name
 Create chain config name
 */}}
 {{- define "chain.configName" -}}
-{{- printf "%s.cfg" .Values.client.chain }}
+{{- printf "%s.cfg" .Values.node.chain }}
 {{- end }}
 
 {{/*
 Create chain spec name
 */}}
 {{- define "chain.specName" -}}
-{{- printf "%s.json" .Values.client.chain }}
+{{- printf "%s.json" .Values.node.chain }}
 {{- end }}
 
 {{/*
 Chain sync mode
 */}}
 {{- define "chain.syncMode" -}}
-{{- if .Values.client.fastSync }}
+{{- if .Values.node.fastSync }}
 {{- default "Fast" }}
 {{- else }}
 {{- default "Archive" }}
@@ -118,12 +147,12 @@ Chain sync mode
 Create chain node name
 */}}
 {{- define "chain.nodeName" -}}
-{{- printf "%s %s ERPC" .Values.client.chain (include "chain.syncMode" .) | title | quote }}
+{{- printf "%s %s ERPC" .Values.node.chain (include "chain.syncMode" .) | title | quote }}
 {{- end }}
 
 {{/*
 Create PVC DB mount path
 */}}
 {{- define "pvc.dbMountPath" -}}
-{{- printf "%s/%s" .Values.pvc.mountPathPrefix .Values.client.chain }}
+{{- printf "%s/%s" .Values.pvc.mountPathPrefix .Values.node.chain }}
 {{- end }}

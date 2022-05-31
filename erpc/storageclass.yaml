@@ -1,7 +1,15 @@
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
 metadata:
-  name: erpc-sc
+  name: erpc-sc-io1
 provisioner: ebs.csi.aws.com
+parameters:
+  type: "io1"
+  iopsPerGB: "3"
+  allowAutoIOPSPerGBIncrease: "true"
+  # csi.storage.k8s.io/fstype: "ext4"
+  # type: "gp3"
+  # iops: "10000"
+  # throughput: "1000"
 volumeBindingMode: WaitForFirstConsumer
 allowVolumeExpansion: true
