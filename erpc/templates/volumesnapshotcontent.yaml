@@ -1,4 +1,4 @@
-{{- if .Values.snapshotUse.enabled }}
+{{- if ne .Values.node.volume.snapshot "" }}
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshotContent
 metadata:
@@ -11,7 +11,7 @@ spec:
     name: {{ include "erpc.volumeSnapshotName" . }}
     namespace: {{ .Release.Namespace }}
   source:
-    snapshotHandle: {{ .Values.snapshotUse.ebsSnapshotId }}
+    snapshotHandle: {{ .Values.node.volume.snapshot }}
   driver: ebs.csi.aws.com
   deletionPolicy: Delete
   volumeSnapshotClassName: {{ include "erpc.volumeSnapshotClassName" . }}

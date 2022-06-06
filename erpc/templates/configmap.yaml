@@ -1,3 +1,5 @@
+{{ $chain := .Values.node.chain }}
+{{ $nodeName := include "chain.nodeName" . }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -14,8 +16,8 @@ data:
         "IsMining": false,
         "ChainSpecPath": "chainspec/{{ include "chain.specName" . }}",
         "GenesisHash": {{ .Values.node.genesisHash | quote }},
-        "BaseDbPath": "nethermind_db/{{ $.Values.node.chain }}",
-        "LogFileName": "{{ .Values.node.chain }}.logs.txt",
+        "BaseDbPath": "nethermind_db/{{ $chain }}",
+        "LogFileName": "{{ $chain }}.logs.txt",
         "MemoryHint": 768000000
       },
       "Network": {
@@ -49,12 +51,12 @@ data:
       "EthStats": {
         "Enabled": false,
         "Server": "ws://localhost:3000/api",
-        "Name": {{ include "chain.nodeName" . }},
+        "Name": {{ $nodeName }},
         "Secret": "secret",
         "Contact": "hello@nethermind.io"
       },
       "Metrics": {
-        "NodeName": {{ include "chain.nodeName" . }},
+        "NodeName": {{ $nodeName }},
         "Enabled": false,
         "PushGatewayUrl": "http://localhost:9091/metrics",
         "IntervalSeconds": 5

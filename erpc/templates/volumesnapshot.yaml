@@ -1,4 +1,4 @@
-{{- if .Values.snapshotUse.enabled }}
+{{- if ne .Values.node.volume.snapshot "" }}
 apiVersion: snapshot.storage.k8s.io/v1
 kind: VolumeSnapshot
 metadata:

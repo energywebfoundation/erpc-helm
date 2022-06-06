@@ -46,12 +46,18 @@ securityContext: {}
   # runAsNonRoot: true
   # runAsUser: 1000
 
+# Service related settings
 service:
+  # Service type (For enabling AWS NLB set NodePort)
   type: NodePort
   annotations: {}
+  # HTTP port number
   httpPort: 8545
+  # WebSocket port number
   wsPort: 8546
+  # UDP discovery port number
   discoveryPort: 30304
+  # P2P port number
   p2pPort: 30303
 
 ingress:
@@ -88,32 +94,29 @@ tolerations: []
 
 affinity: {}
 
-snapshotUse:
-  enabled: true
-  ebsSnapshotId: snap-078ccc2fe56cb7abe
-  snapshotSize: 250Gi
-
-pvc:
-  storageClassName: erpc-sc-io1
-  accessMode: ReadWriteOnce
-  volumeSize: 250Gi
-  mountPathPrefix: /nethermind/nethermind_db
-
-existingClaim:
-  enabled: false
-  claimName: my-claim
-  mountPath: /nethermind/nethermind_db
-
 node:
+  # Is Nethermind fast synd enabled (true/false)
   fastSync: true
+  # Is Websocket port should be enabled (true/false)
   webSocketEnabled: true
+  # Chain name (energyweb/volta)
   chain: "energyweb"
+  # Number of starting replicas
   replicas: 1
+  # URL of the chainspec to download with init container
   chainspecURL: https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json
+  # Chain related settings
   genesisHash: 0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b
+  # Chain starting block to sync from with fast sync
   pivotNumber: 16400000
   pivotHash: 0x1c62742497b3d0eb286589b9caf0d895f3aa0466978b44f55fb6f3e8030ccd07
   pivotTotalDifficulty: "5580630817503390800799343561880998667533141730"
+  # DB volume related settings
+  volume:
+    # Size of database volume
+    size: 300Gi
+    # ID of the EBS snapshot with Nethermind DB (for ex. snap-078ccc2fe56cb7abe). Leave empty if disabled
+    snapshot: snap-0feebdeb8e76fbad3
   # chain: volta
   # genesisHash: 0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5
   # pivotNumber: 16010000

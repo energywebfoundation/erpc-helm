@@ -80,7 +80,7 @@ Create the name of the service account to use
 Generate pseudo random value based on EBS snapshot ID
 */}}
 {{- define "erpc.uuid" -}}
-{{- trimPrefix "snap-" .Values.snapshotUse.ebsSnapshotId -}}
+{{- trimPrefix "snap-" .Values.node.volume.snapshot -}}
 {{- end }}
 
 {{/*
@@ -109,13 +109,6 @@ Create VolumeSnapshotContent name
 */}}
 {{- define "erpc.volumeSnapshotContentName" -}}
 {{- printf "%s-vs-content-%s" (include "erpc.fullname" .) (include "erpc.uuid" .) | replace "+" "_" | trunc 63 | trimSuffix "-" }}
-{{- end }}
-
-{{/*
-Create PVC name
-*/}}
-{{- define "erpc.PVCName" -}}
-{{- printf "%s-pvc" (include "erpc.fullname" .) }}
 {{- end }}
 
 {{/*
@@ -148,11 +141,4 @@ Create chain node name
 */}}
 {{- define "chain.nodeName" -}}
 {{- printf "%s %s ERPC" .Values.node.chain (include "chain.syncMode" .) | title | quote }}
-{{- end }}
-
-{{/*
-Create PVC DB mount path
-*/}}
-{{- define "pvc.dbMountPath" -}}
-{{- printf "%s/%s" .Values.pvc.mountPathPrefix .Values.node.chain }}
 {{- end }}

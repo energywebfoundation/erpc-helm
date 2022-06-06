@@ -1,6 +1,7 @@
 {{ $fullname := include "erpc.fullname" . }}
 {{ $selectorLabels :=  include "erpc.selectorLabels" . }}
 {{ $serviceAccountName :=  include "erpc.serviceAccountName" . }}
+{{ $chain := .Values.node.chain }}
 {{ $chainspecName := include "chain.specName" . }}
 {{ $chainConfig := include "chain.configName" . }}
 {{ $labels := include "erpc.labels" . }}
@@ -53,8 +54,7 @@ spec:
               POD_INDEX="${HOSTNAME##*-}"
               NLB_HOST="$(kubectl -n {{ .Release.Namespace }} get service {{ $fullname }}-${POD_INDEX} -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')"
               echo "NLB host: ${NLB_HOST}"
-              echo "${NLB_HOST}" > /tmp/nethermind/chainspec/nlb-ip  
-              while [ -z "${NLB_IP}" ]; do echo "Searching for NLB IP...."; sleep 5; NLB_IP="$(curl -vs --connect-timeout 1 ${NLB_HOST} 2>&1 | grep -i trying | awk '{print substr( $3, 0, length($3)-2)}' | head -n 1)"; done
+              while [ -z "${NLB_IP}" ]; do echo "Searching for NLB IP...."; sleep 5; NLB_IP="$(curl -vs --connect-timeout 1 ${NLB_HOST} 2>&1 | egrep -o '([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})\.([0-9]{1,3})' | head -n 1)"; done
               echo "NLB IP: ${NLB_IP}"
               echo "${NLB_IP}" > /tmp/nethermind/chainspec/nlb-ip
           volumeMounts:
@@ -95,7 +95,7 @@ spec:
             - -c
             - |
               EXT_IP="$(cat /nethermind/chainspec/nlb-ip)"
-              ./Nethermind.Runner --config {{ .Values.node.chain | quote }} --Network.ExternalIp ${EXT_IP}
+              ./Nethermind.Runner --config {{ $chain | quote }} --Network.ExternalIp ${EXT_IP}
           # --Network.ExternalIp $(cat nethermind/chainspec/extip)
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -105,33 +105,16 @@ spec:
               subPath: {{ $chainConfig }}
             - name: chainspec-data
               mountPath: "nethermind/chainspec"
-            {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
-            {{- if .Values.snapshotUse.enabled }}
-            - mountPath: {{ include "pvc.dbMountPath" . | quote }}
-              name: db-volume
-              subPath: database/{{ .Values.node.chain }}
-            {{- end }}
-            {{- if .Values.existingClaim.enabled }}
-            - mountPath: {{ .Values.existingClaim.mountPath | quote }}
-              name: existingclaim
-            {{- end }}
-            {{- end }}
+            - name: db-volume
+              mountPath: "nethermind/nethermind_db"
+              {{- if ne .Values.node.volume.snapshot "" }}
+              subPath: database
+              {{- end }}
       volumes:
         - name: config-volume
           configMap:
-            name: {{ include "erpc.fullname" . }}
-        {{- if or .Values.snapshotUse.enabled .Values.existingClaim.enabled }}
-        {{- if .Values.snapshotUse.enabled }}
+            name: {{ $fullname }}
         - name: db-volume
-          # persistentVolumeClaim:
-          #   claimName: {{ include "erpc.PVCName" . }}
-        {{- end }}
-        {{- if .Values.existingClaim.enabled }}
-        - name: existingclaim
-          persistentVolumeClaim:
-            claimName: {{ .Values.existingClaim.claimName | quote }}
-        {{- end }}
-        {{- end }}
         - name: chainspec-data
           emptyDir: {}
       {{- with .Values.nodeSelector }}
@@ -154,16 +137,12 @@ spec:
         labels:
           {{- $labels | nindent 10 }}
       spec:
-        storageClassName: {{ .Values.pvc.storageClassName | quote }}
-        accessModes: [ {{ .Values.pvc.accessMode | quote }} ]
+        storageClassName: {{ $fullname | quote }}
+        accessModes: [ "ReadWriteOnce" ]
         resources:
           requests:
-            {{- if .Values.snapshotUse.enabled }}
-            storage: {{ .Values.snapshotUse.snapshotSize | quote }}
-            {{- else }}
-            storage: {{ .Values.pvc.volumeSize | quote }}
-            {{- end }}
-        {{- if .Values.snapshotUse.enabled }}
+            storage: {{ .Values.node.volume.size | quote }}
+        {{- if ne .Values.node.volume.snapshot "" }}
         dataSource:
           name: {{ include "erpc.volumeSnapshotName" . }}
           kind: VolumeSnapshot
