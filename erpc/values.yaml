@@ -113,7 +113,7 @@ node:
     # Size of database volume
     size: 300Gi
     # ID of the EBS snapshot with Nethermind DB (for ex. snap-078ccc2fe56cb7abe). Leave empty if disabled
-    snapshot: snap-03dd3df2892f9cda0
+    snapshot: snap-028a50f8ab02d6659
   # chain: volta
   # genesisHash: 0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5
   # pivotNumber: 16010000
@@ -123,3 +123,134 @@ node:
 # Add extra labels on pods and services
 #extraLabels:
 #  type: rpc
+
+didAuthProxy:
+  enabled: true
+  replicaCount: 1
+
+  image:
+    repository: public.ecr.aws/p2b6f2f9/did-auth
+    pullPolicy: IfNotPresent
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "latest"
+
+  imagePullSecrets:
+
+  serviceAccount:
+    # Specifies whether a service account should be created
+    create: true
+    # Annotations to add to the service account
+    annotations: {}
+    # The name of the service account to use.
+    # If not set and create is true, a name is generated using the fullname template
+    name: ""
+
+  podAnnotations: {}
+
+  podSecurityContext: {}
+    # fsGroup: 2000
+
+  securityContext: {}
+    # capabilities:
+    #   drop:
+    #   - ALL
+    # readOnlyRootFilesystem: true
+    # runAsNonRoot: true
+    # runAsUser: 1000
+
+  service:
+    type: ClusterIP
+    port: 80
+
+  ingress:
+    enabled: false
+    className: ""
+    annotations:
+      kubernetes.io/ingress.class: nginx
+    hosts:
+      - host: did-auth-proxy-sandbox.energyweb.org
+        paths:
+        - path: /
+          pathType: Prefix
+    tls:
+      - secretName: did-auth-proxy-secret
+        hosts:
+          - did-auth-proxy-sandbox.energyweb.org
+
+  config:
+    enabled: false
+    secretRefName: {}
+    configRefName: {}
+
+  appValues:
+    PORT: 80
+    ACCEPTED_ROLES: role1.roles.erpc.apps.erpc-test.iam.ewc,test01.roles.erpc-test.iam.ewc
+    JWT_ACCESS_TTL: 3600
+    JWT_REFRESH_TTL: 86400
+
+  opsValues:
+    RPC_URL: "https://volta-rpc.energyweb.org/"
+    CACHE_SERVER_URL: "https://identitycache-dev.energyweb.org/v1"
+    REDIS_PORT: 6379
+
+  sealedSecret:
+    enabled: true
+    # Should be the same with .Values.redis.auth.existingSecret
+    name: did-auth-sealedsecret
+    # Namespace agnostic sealed secret.
+    # kubeseal should be used with '--scope cluster-wide' param
+    annotations:
+      sealedsecrets.bitnami.com/cluster-wide: "true"
+    encryptedData: 
+      CACHE_SERVER_LOGIN_PRVKEY: AgBUwYHFf1bmABMy1sM0fYOJ4SVJx+ShVJVze4kwRbuMswCRtxTITK0c7h+R/u5DJsCKYBRc1hU6EL2Nd9PI3dOYUCIRhHOW8XGMdnuuxQ+ClYmMO8mUimCG+czTAsqJJGSjwmKFO4TJfAltrN5mj+JgnjXCEdo3W7T1FO7eIxrOr3uIliQZU+iOLDYXqPR80ZfN5nzwzfiJpVWBXhwiZdnk0MiXpYQegj5NGPUnJjCflK6ReaZeWesxYAci3aYvxlku/+pY1c5esRxMSeVfne7Ka94KJRlUGJBTWrb8ynNmzwAYQ4PoK89uHlKCDb4veLm3FBnjDHRln5l8h+eVa3xCmtMEr9Y0CJfUO7pSf7KT03hCiZrjTOEk/pqW929mtY6v3u70D0IHEC6P/XhggIqREE4fZIWDu5ugKz4uDu/Xr65/YlTM07BsVLCbgiRr84cf4azc7F+22Q0xuqVyB6+XDf9S3JPX6xkZxs3wDQP7FonYQn6OQUPkyisN6CZg3f7DI2FmW3hvr/EYKF+ZO0LEVeggUF2SLBU+VAUKjixG1ILm5/CVPaorEq/n7QdwpMI6lSe42pZ++dwFppygG/ZAMcSPiiEg4Zp8dN2F5nI/+8jIhtThuifCSNaXARo3epxC9Ut2wq4Wr/h5kHsH0XaOD6Il8nQTwatbOmsjVoh6Eq1p93GCf5a9oB4dOXFIofcLbfDS2nNa+85tSBWEdglvJ0pFTPgQEC6fHg3zIZxicf7xlKzBl7czPtEBz5IeORknhS2jStKxiDRZ7rK5lo1I
+      JWT_SECRET: AgBtwCaREkfo+AyJvzHAB+deT5rm3pLZN4IqWq5i2vYAIbrJTqRsJc27+9ljXaxt7iGL+69k2QZ+NZ+cbx28mmZQKon9M1GCf9K182Zkm5YavEPC3mUOzfOz16s7quCZKnOOkodjj3MlCjnJ7YHE+ljDaahAS7SzgbCMHoOtXUH1RlcKJe+dtMNgIysSdzEKHDyq1+/zmq2CEa6p5E8K3HHc0uslvz7Fj12guNCoT85EyZBpqbUVwBGo2bryvqVAvaN8VD8apGpEkyHy/ET1C6jw8SXDLWQSEyAQk+uUD0yiUp4iNddxS5XTEcj4qpas6rd19J1CGwpHkkwjD+S4/1Zm0eNDWP/ez8t4+bAcecgBs8o4I04hg266sCrGd+24cjbvqPZa2ha1vX6NEV4tlvdyV/wodzI+LiPEl/4TCajUaeL0fXDE7AWl+MlVIFS57A9ItqZQvvzJ6gLsYxTSiiY3QRCvVHlLD4Fiw0MsHc1/+tNZrlLTwJk//1k5WuR6jEh+6RGtn/hZ2BiOuyIL/MuTQ9cHIa1JjB9Ftpjj2j1oP6f1UBFzk3DB97gMGjS4DBQxBmfvgprYlspK3mr+WM7DFXkBAqxp5PEFM/6aQpKt2xkRIbVoxVekIdawR0GO7E87eiudQlOTBVTyKRa84ZROgndeFYfh1sJR5wiS7HqcyIwiWgG95QOXUo2CxRK5PCK8/phRnk98z7s=
+      REDIS_PASSWORD: AgCPcSPl6MF6zdNczUDzw8C5w6w32w/XP8u9sabAAXxr/umIdWvr0tzB8V5E7PHHEQ81kpeipCMnKUgA2Jv/WnMEdX9A9iTQPtUcFrGMfPH+6sXdV54/Sqa+1LM6cc2XmtM5NXktKFtPgMLOBbJh7b+aj+BQH5Zh7trjwg8VyXzWDYOz8AO3Qd2V72MZO6uYZwlSDwEplOsd95JyFZopZG5eNZitbo2vOyZoG6TZ/059qNwjTmnLHljsggrjTHZV7bLB1oKfQ0X1JVcarQshl273Oe1HzT2WPxOAesQDG+HsvhtvLLd1hHuDb12s5n3TJnUjWpI33pVxB7YOApcrTkQE1lNClgUP+VYCDbC1MilJ51uaoEF8Da0L3P2bo0T8wlVUc5HOBj1sLiIpofW05191a83GYUtqo5+P1ngygyiP+SNVrrLKBcYLBsjGD+mauyRFA+AXYMVSru+HrP94m1qX2g/kk2nCXYtoolXlrSQMP2t9TVGWHVWJGdjF48PRInimUyX2uRbcw+DTUHVBwNdOBVT2+CXpEKV1ZDrtOJXXIdPwRLthUqQSsoU4HZosrH6ZnOmR2DhMaoToJgEILJI9cAmBn24euQIT8Ko6vYm5nVzzHe1f4UBzxXyokusK4Rf6i1GL3howBedqLpfOF1ohmjE/Dzg+lbkw2uuVajGMIO7dW6b++D1rzJPXyMIjr0vJB1EgG3Z4OxaC4Q0=
+      DID_REGISTRY_ADDRESS: AgChzF9/AYAer+9/LLWL1FPJ2l74/KJ0UBo1MP1eZlmni81BTrO4rH2ep9SqeReGbMCsQ2UFaSub1tefs1DeOEHzIGwy+3BnCjhGgpzS68kjiSu4Y9ZJCRbKsm+A6k3IZd4zRoAq25oDIfswm4xS/jXClYO6thw/QgCi57lKizPFjgHDE2S8/CB0trjI9f2IpPxWraliPTf53v+goxnsUajVnae+Wm5WwwyS3SZk+uyWYPw53TMXTsBEpPR4wi0W9me5Gwgpv7HQmSEXt4cHIt3hAB6rIdp8w9ElXsByLjHoxdNBPburvGbb4kGMbWjViGXiD2yKdy5xOxwSnfdRSgzsyfl/LsEdAUbmlJ211KV8P8sBSRcrdvDw5TS0IzIadqcvrFatEJ2fuLK+oxkaDOXaZYIV5sd8P1T/aP4CyimtkawZk039x92elP/aMKT2zcGjcCRp+wInR6MgAOzhF2fRXLpbitmWbDYaHUoQyCXmE/eczFh32SfafHfy1cCfBr4O1dug61gnSVsoe4YMe/pzzoUY5pGP30eMYG60r4n/jpC8Sj6Ks4Rwy4/UUtUQtWJGmOBHHB+E5FCG/IEgwE+QdEOQms0/Z28NMh9vz5mxJVDp/zEDt7ybwWsXJprN97RGLz8HElkLihsCwY9Ik2fRnR6/eLOTPmrP52Bm5X1cJWu9kf8ulRalT3bHaZkfWZNmKf8I/9o3Uq09JNAp1QWc6lVNM3CRrFVMJ/+2ADKgyyL/etbYHbEtkxY=
+      ENS_REGISTRY_ADDRESS: AgA/6h9UjZRAaluzAi82he4vIQfP99vjkB0dtCBrokfL2DUwhTrdGwxSu3gsqvrCfobwRheJzvihpLEtRROv5R0JFfBAs7YBVGmrmtGfrYogGZG/D3NnHSxaJxqP07DbSrUlFfezO7TSqWDJIfUCSDTkk1kURTVS7jKpw/cGY08IjmLStZctD8Fexu65E/nESWBYaNLcJQLsOzatxqnGHN48lXVGjVqzZ0WvPp2Fu1MaVZS71Rn6e6ojGIhu9mehHLFfnB5kLX0E9CY+UNx7LWQEcSzO/FN604WNC8HgcAmPZzi6VyleGd6RCmHVwNzLTEzDpqMS0mKH5lB2mTi1qZ18lp+5Y0489iZDzZMpI/A2z0rDjU9XSIDXK5ziVhq+Ip3PrgSgl5HnV4FSjrYqikaEz0C5nU572uOewz8AXyXZAkj4gSIKqnI4SNzG+UTU5gtrdL/fJbtERzKc6DhFAyYxHX0BsjwHgLquHUC0t3VO41yXZEqPAGOWST1V5B4z0nVQmYCzx1+5WW183i6WKooZRmJhwXwknWMt5yPxkGXCYGB10VTrtHYpvjrYOHDPZXq1y9baCkEBrW60u5pCMV68tnNhb0Er0zW6v5jViMCcjyO2s1dDCPCYDGagFlYELlkqZzvYgiEIhvhqbT24PtbGbQhyXeqlN9Dynvzj5vwfUGyx4IFz1Zpho03HSk1PE1YzFz1C7O0XVxdPPi0Y7W+YW1VbKq+knaobrg003Texh0ptCt3nzlApBXo=
+
+  resources: {}
+    # We usually recommend not to specify default resources and to leave this as a conscious
+    # choice for the user. This also increases chances charts run on environments with little
+    # resources, such as Minikube. If you do want to specify resources, uncomment the following
+    # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+redis:
+  # Architecture should be standalone
+  architecture: standalone
+  auth:
+    # Values should be equal to .Values.didAuthProxy.sealedSecret.name
+    existingSecret: did-auth-sealedsecret
+    existingSecretPasswordKey: REDIS_PASSWORD
+
+nginx:
+  existingServerBlockConfigmap: did-auth-nginx-configmap
+
+  ingress:
+    enabled: false
+    annotations:
+      alb.ingress.kubernetes.io/load-balancer-name: "{{ .Chart.Name }}-alb"
+      alb.ingress.kubernetes.io/target-type: ip
+      alb.ingress.kubernetes.io/backend-protocol: HTTP
+      alb.ingress.kubernetes.io/scheme: internet-facing
+      alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
+      alb.ingress.kubernetes.io/healthcheck-port: "{{ .Values.service.httpPort }}"
+      alb.ingress.kubernetes.io/success-codes: 200-399

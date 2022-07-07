@@ -1,0 +1,32 @@
+{{- if (.Values.nginx.existingServerBlockConfigmap) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.nginx.existingServerBlockConfigmap }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels: 
+    {{- include "did-auth-proxy-helm.labels" . | nindent 4 }}
+data:
+  server-block.conf: |-
+    server {
+      listen 0.0.0.0:8080;
+      server_name  _;
+      location ~ ^/(healthchecks-ui|health) {
+        proxy_pass http://{{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
+      }
+      location ~ ^/auth {
+        proxy_pass http://{{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local;
+      }
+      location ~ / {
+        auth_request /token_introspection;
+        proxy_pass http://{{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
+      }
+      location = /token_introspection {
+        internal;
+        proxy_method      GET;
+        proxy_set_header  Authorization "$http_authorization";
+        proxy_set_header  Content-Length "";
+        proxy_pass        http://{{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/auth/token-introspection;
+      }
+    }
+{{- end }}

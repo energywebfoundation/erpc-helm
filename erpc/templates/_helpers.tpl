@@ -142,3 +142,60 @@ Create chain node name
 {{- define "chain.nodeName" -}}
 {{- printf "%s %s ERPC" .Values.node.chain (include "chain.syncMode" .) | title | quote }}
 {{- end }}
+
+{{ define "render-value" }}
+  {{- if kindIs "string" .value }}
+    {{- tpl .value .context }}
+  {{- else }}
+    {{- tpl (.value | toYaml) .context }}     
+  {{- end }}
+{{- end }}
+
+#### DID-Auth related helpers
+
+{{/*
+Expand the DID-Auth app name.
+*/}}
+{{- define "did-auth-proxy-helm.name" -}}
+{{- printf "%s-did-auth" (include "erpc.name" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Create a default fully qualified DID-Auth app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+If release name contains chart name it will be used as a full name.
+*/}}
+{{- define "did-auth-proxy-helm.fullname" -}}
+{{- printf "%s-did-auth" (include "erpc.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Common labels
+*/}}
+{{- define "did-auth-proxy-helm.labels" -}}
+helm.sh/chart: {{ include "erpc.chart" . }}
+{{ include "did-auth-proxy-helm.selectorLabels" . }}
+{{- if .Chart.AppVersion }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+{{- end }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Selector labels
+*/}}
+{{- define "did-auth-proxy-helm.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "did-auth-proxy-helm.name" . }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+
+{{/*
+Create the name of the service account to use
+*/}}
+{{- define "did-auth-proxy-helm.serviceAccountName" -}}
+{{- if .Values.didAuthProxy.serviceAccount.create }}
+{{- default (include "did-auth-proxy-helm.fullname" .) .Values.didAuthProxy.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.didAuthProxy.serviceAccount.name }}
+{{- end }}
+{{- end }}

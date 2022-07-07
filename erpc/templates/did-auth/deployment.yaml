@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "did-auth-proxy-helm.fullname" . }}
+  labels:
+    {{- include "did-auth-proxy-helm.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.didAuthProxy.autoscaling.enabled }}
+  replicas: {{ .Values.didAuthProxy.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "did-auth-proxy-helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.didAuthProxy.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "did-auth-proxy-helm.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.didAuthProxy.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "did-auth-proxy-helm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.didAuthProxy.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.didAuthProxy.securityContext | nindent 12 }}
+          image: "{{ .Values.didAuthProxy.image.repository }}:{{ .Values.didAuthProxy.image.tag | default .Chart.AppVersion }}"
+          env:
+            - name: REDIS_HOST
+              value: {{ .Release.Name }}-redis-master.{{ .Release.Namespace }}.svc.cluster.local
+            {{- range $key, $value := .Values.didAuthProxy.appValues }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- range $key, $value := .Values.didAuthProxy.opsValues }}
+            - name: {{ $key }}
+              value: {{ $value | quote }}
+            {{- end }}
+          envFrom:
+            {{- if .Values.didAuthProxy.sealedSecret.enabled }}
+            - secretRef:
+                {{- if (.Values.didAuthProxy.sealedSecret.name) }}
+                name: {{ .Values.didAuthProxy.sealedSecret.name }}
+                {{- else }}
+                name: {{ include "did-auth-proxy-helm.fullname" . }}-sealedsecret
+                {{- end }}
+            {{- end }}
+            {{- if .Values.didAuthProxy.config.enabled }}
+            - secretRef:
+                name: {{ .Values.didAuthProxy.config.secretRefName }}
+                optional: false
+            - configMapRef:
+                name: {{ .Values.didAuthProxy.config.configRefName }}
+            {{- end }}
+          imagePullPolicy: {{ .Values.didAuthProxy.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.didAuthProxy.appValues.PORT }}
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /auth
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /auth
+              port: http
+          resources:
+            {{- toYaml .Values.didAuthProxy.resources | nindent 12 }}
+      {{- with .Values.didAuthProxy.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.didAuthProxy.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.didAuthProxy.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
