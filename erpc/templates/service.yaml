@@ -18,7 +18,7 @@ spec:
       targetPort: {{ .Values.service.httpPort }}
       protocol: TCP
       name: http
-      {{- if .Values.node.webSocketEnabled }}
+      {{- if and .Values.node.webSocketEnabled (not (.Values.didAuthProxy.enabled)) }}
     - port: {{ .Values.service.wsPort }}
       targetPort: {{ .Values.service.wsPort }}
       protocol: TCP
@@ -63,6 +63,7 @@ spec:
   clusterIP: None
   {{- end }}
   ports:
+    {{- if not $.Values.didAuthProxy.enabled }}
     - port: {{ $.Values.service.httpPort }}
       targetPort: {{ $.Values.service.httpPort }}
       protocol: TCP
@@ -73,6 +74,7 @@ spec:
       protocol: TCP
       name: ws
       {{- end }}
+    {{- end }}
     - port: {{ $.Values.service.p2pPort }}
       targetPort: {{ $.Values.service.p2pPort }}
       protocol: TCP

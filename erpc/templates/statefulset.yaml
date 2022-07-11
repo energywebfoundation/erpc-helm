@@ -70,7 +70,7 @@ spec:
             - name: http
               containerPort: {{ .Values.service.httpPort }}
               protocol: TCP
-            {{- if .Values.node.webSocketEnabled }}
+            {{- if and .Values.node.webSocketEnabled (not (.Values.didAuthProxy.enabled)) }}
             - name: ws
               containerPort: {{ .Values.service.wsPort }}
               protocol: TCP
