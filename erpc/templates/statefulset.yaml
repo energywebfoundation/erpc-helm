@@ -81,15 +81,21 @@ spec:
             - name: discovery-udp
               containerPort: {{ .Values.service.discoveryPort }}
               protocol: UDP
-          # livenessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: http
-          # readinessProbe:
-          #   httpGet:
-          #     path: /
-          #     port: http /nethermind/
-          #command: ["./Nethermind.Runner", "--help"]
+          livenessProbe:
+            tcpSocket:
+              port: p2p-tcp
+            failureThreshold: 1
+            periodSeconds: 60
+          readinessProbe:
+            tcpSocket:
+              port: http
+            failureThreshold: 1
+            periodSeconds: 10
+          startupProbe:
+            tcpSocket:
+              port: p2p-tcp
+              failureThreshold: 30
+              periodSeconds: 10
           command: [ "/bin/sh" ]
           args: 
             - -c

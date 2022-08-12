@@ -30,7 +30,7 @@ data:
       },
       "JsonRpc": {
         "Enabled": true,
-        "EnabledModules": ["Eth", "Net", "Parity","Web3"],
+        "EnabledModules": ["Eth", "Net", "Parity","Web3","Health","Rpc"],
         "Timeout": 20000,
         "Host": "0.0.0.0",
         "Port": {{ .Values.service.httpPort }},

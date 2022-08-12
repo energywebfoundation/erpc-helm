@@ -6,16 +6,18 @@ image:
   repository: nethermind/nethermind
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.12.8"
+  tag: "1.13.5"
 
 initContainer:
   image:
     repository: crazymax/7zip
+    pullPolicy: IfNotPresent
     tag: latest
 
 kubectl:
   image:
     repository: bitnami/kubectl
+    pullPolicy: IfNotPresent
     tag: latest
 
 imagePullSecrets: []
@@ -60,30 +62,14 @@ service:
   # P2P port number
   p2pPort: 30303
 
-ingress:
-  enabled: false
-  className: ""
-  annotations: {}
-    # kubernetes.io/ingress.class: nginx
-    # kubernetes.io/tls-acme: "true"
-  hosts:
-    - host: chart-example.local
-      paths:
-        - path: /
-          pathType: ImplementationSpecific
-  tls: []
-  #  - secretName: chart-example-tls
-  #    hosts:
-  #      - chart-example.local
-
+resources: {}
 # Recommended resources for the node
-resources:
-  limits:
-    cpu: 2048m
-    memory: 6144Mi
-  requests:
-    cpu: 2048m
-    memory: 5120Mi
+  # limits:
+  #   cpu: 2048m
+  #   memory: 6144Mi
+  # requests:
+  #   cpu: 2048m
+  #   memory: 5120Mi
 
 nodeSelector: {}
 
@@ -96,29 +82,30 @@ node:
   fastSync: true
   # Is Websocket port should be enabled (true/false)
   webSocketEnabled: true
-  # Chain name (energyweb/volta)
-  chain: "energyweb"
   # Number of starting replicas
   replicas: 1
+  # Chain name (energyweb/volta)
+  # chain: "energyweb"
+  chain: volta
   # URL of the chainspec to download with init container
-  chainspecURL: https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json
+  # chainspecURL: https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/EnergyWebChain.json
+  chainspecURL: https://raw.githubusercontent.com/energywebfoundation/ewf-chainspec/master/Volta.json
   # Chain related settings
-  genesisHash: 0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b
+  # genesisHash: 0x0b6d3e680af2fc525392c720666cce58e3d8e6fe75ba4b48cb36bcc69039229b
+  genesisHash: 0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5
   # Chain starting block to sync from with fast sync
-  pivotNumber: 16400000
-  pivotHash: 0x1c62742497b3d0eb286589b9caf0d895f3aa0466978b44f55fb6f3e8030ccd07
-  pivotTotalDifficulty: "5580630817503390800799343561880998667533141730"
+  # pivotNumber: 16400000
+  pivotNumber: 15510000
+  # pivotHash: 0x1c62742497b3d0eb286589b9caf0d895f3aa0466978b44f55fb6f3e8030ccd07
+  pivotHash: 0x69a8ab325e93c7570a40e2275b93fe5defe08b52c75ca45319139e11cd04cf8e
+  # pivotTotalDifficulty: "5580630817503390800799343561880998667533141730"
+  pivotTotalDifficulty: "5277779510943755568316940161266724959338720152"
   # DB volume related settings
   volume:
     # Size of database volume
     size: 300Gi
     # ID of the EBS snapshot with Nethermind DB (for ex. snap-078ccc2fe56cb7abe). Leave empty if disabled
-    snapshot: snap-028a50f8ab02d6659
-  # chain: volta
-  # genesisHash: 0xebd8b413ca7b7f84a8dd20d17519ce2b01954c74d94a0a739a3e416abe0e43e5
-  # pivotNumber: 16010000
-  # pivotHash: 0x14dbcf707c72a55872b3cb30be6f1333a3ac7d0ed458ac7e5dea951af1513fe0
-  # pivotTotalDifficulty: "5447920694404224800048627464982609065065693091"
+    snapshot: snap-04c5e163d99c8bff8
 
 # Add extra labels on pods and services
 #extraLabels:
@@ -161,21 +148,6 @@ didAuthProxy:
   service:
     type: ClusterIP
     port: 80
-
-  ingress:
-    enabled: false
-    className: ""
-    annotations:
-      kubernetes.io/ingress.class: nginx
-    hosts:
-      - host: did-auth-proxy-sandbox.energyweb.org
-        paths:
-        - path: /
-          pathType: Prefix
-    tls:
-      - secretName: did-auth-proxy-secret
-        hosts:
-          - did-auth-proxy-sandbox.energyweb.org
 
   config:
     enabled: false
@@ -244,13 +216,21 @@ redis:
 nginx:
   existingServerBlockConfigmap: did-auth-nginx-configmap
 
+  service:
+    type: NodePort
+  
   ingress:
-    enabled: false
+    enabled: true
+    # Specify the ingress class name to use
+    ingressClassName: alb
+    hostname: "erpc-volta-fast.energyweb.org"
+    path: "/*"
     annotations:
-      alb.ingress.kubernetes.io/load-balancer-name: "{{ .Chart.Name }}-alb"
-      alb.ingress.kubernetes.io/target-type: ip
+      # Annotations for AWS Load Balancer Controller
+      # Could be seen here: https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/ingress/annotations/
+      alb.ingress.kubernetes.io/target-type: instance
       alb.ingress.kubernetes.io/backend-protocol: HTTP
+      alb.ingress.kubernetes.io/healthcheck-port: traffic-port
       alb.ingress.kubernetes.io/scheme: internet-facing
       alb.ingress.kubernetes.io/inbound-cidrs: 0.0.0.0/0
-      alb.ingress.kubernetes.io/healthcheck-port: "{{ .Values.service.httpPort }}"
       alb.ingress.kubernetes.io/success-codes: 200-399
