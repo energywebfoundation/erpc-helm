@@ -13,24 +13,28 @@ data:
       server_name  _;
       location ~ ^/(healthchecks-ui|health) {
         resolver kube-dns.kube-system.svc.cluster.local ipv6=off;
-        proxy_pass http://{{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
+        set $erpc {{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
+        proxy_pass http://$erpc;
       }
       location ~ ^/auth {
         resolver kube-dns.kube-system.svc.cluster.local ipv6=off;
-        proxy_pass http://{{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local;
+        set $didauthproxy {{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local;
+        proxy_pass http://$didauthproxy;
       }
       location ~ / {
         resolver kube-dns.kube-system.svc.cluster.local ipv6=off;
+        set $erpc {{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
         auth_request /token_introspection;
-        proxy_pass http://{{ include "erpc.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.httpPort }};
+        proxy_pass http://$erpc;
       }
       location = /token_introspection {
         resolver kube-dns.kube-system.svc.cluster.local ipv6=off;
+        set $didauthproxy {{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local;
         internal;
         proxy_method      GET;
         proxy_set_header  Authorization "$http_authorization";
         proxy_set_header  Content-Length "";
-        proxy_pass        http://{{ include "did-auth-proxy-helm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local/auth/token-introspection;
+        proxy_pass        http://$didauthproxy/auth/token-introspection;
       }
     }
 {{- end }}

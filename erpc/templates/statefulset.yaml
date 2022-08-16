@@ -94,8 +94,8 @@ spec:
           startupProbe:
             tcpSocket:
               port: p2p-tcp
-              failureThreshold: 30
-              periodSeconds: 10
+            failureThreshold: 30
+            periodSeconds: 10
           command: [ "/bin/sh" ]
           args: 
             - -c
