@@ -25,7 +25,7 @@ Run parametrized Helm install with:
     --set node.pivotTotalDifficulty=5580630817503390800799343561880998667533141730 \
     <helm-chart-name> <path-to-helm-chart>
 
-You need to set the pivot block number, hash and total difficulty from a trusted source (you can use etherscan and confirm with other sources if you wan to change it).
+You need to set the pivot block number, hash and total difficulty from a [trusted source](https://explorer.energyweb.org/) (you can use etherscan and confirm with other sources if you wan to change it).
 #### Archive:
 Run parametrized Helm install with:
 
@@ -47,7 +47,7 @@ Run parametrized Helm install with:
     --set node.pivotTotalDifficulty=5277779510943755568316940161266724959338720152 \
     <helm-chart-name> <path-to-helm-chart>
 
-You need to set the pivot block number, hash and total difficulty from a trusted source (you can use etherscan and confirm with other sources if you wan to change it).
+You need to set the pivot block number, hash and total difficulty from a [trusted source](https://volta-explorer.energyweb.org/) (you can use etherscan and confirm with other sources if you wan to change it).
 #### Archive:
 Run parametrized Helm install with:
 
