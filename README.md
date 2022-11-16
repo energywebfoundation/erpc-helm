@@ -13,7 +13,7 @@ A Helm chart for E-RPC node based on Nethermind client
 | https://charts.bitnami.com/bitnami | redis | 16.4.0 |
 
 ## Simple install
-1. Edit Nethermind image version if needed (image.tag)
+1. Edit Nethermind image version if needed (`image.tag`)
 2. Edit E-RPC Node service ports under `service` section, but keep in mind that `discoveryPort` and `p2pPort` should be not the same
 3. Set `node.fastSync` to `true` if you want to run Fast Sync mode on E-RPC node and edit chain related values under `node` section (`chain`, `chainspecURL`, `genesisHash`, `pivotNumber`, `pivotHash`, `pivotTotalDifficulty`). You need to enter the pivot block number, hash and total difficulty from a trusted source (you can use etherscan and confirm with other sources if you wan to change it).
 4. Set `node.fastSync` to `false` if you want to run archive E-RPC node and edit chain related values under `node` section (`cahin`, `chainspecURL`, `genesisHash`)
