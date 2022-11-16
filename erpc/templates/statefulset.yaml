@@ -102,7 +102,6 @@ spec:
             - |
               EXT_IP="$(cat /nethermind/chainspec/nlb-ip)"
               ./Nethermind.Runner --config {{ $chain | quote }} --Network.ExternalIp ${EXT_IP}
-          # --Network.ExternalIp $(cat nethermind/chainspec/extip)
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
@@ -113,7 +112,7 @@ spec:
               mountPath: "nethermind/chainspec"
             - name: db-volume
               mountPath: "nethermind/nethermind_db"
-              {{- if ne .Values.node.volume.snapshot "" }}
+              {{- if .Values.node.volume.snapshot }}
               subPath: database
               {{- end }}
       volumes:
@@ -148,7 +147,7 @@ spec:
         resources:
           requests:
             storage: {{ .Values.node.volume.size | quote }}
-        {{- if ne .Values.node.volume.snapshot "" }}
+        {{- if .Values.node.volume.snapshot }}
         dataSource:
           name: {{ include "erpc.volumeSnapshotName" . }}
           kind: VolumeSnapshot

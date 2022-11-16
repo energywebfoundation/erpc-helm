@@ -6,7 +6,7 @@ image:
   repository: nethermind/nethermind
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.13.6"
+  tag: "1.14.5"
 
 initContainer:
   image:
@@ -18,7 +18,7 @@ kubectl:
   image:
     repository: bitnami/kubectl
     pullPolicy: IfNotPresent
-    tag: latest
+    tag: 1.21
 
 imagePullSecrets: []
 nameOverride: ""
@@ -103,16 +103,16 @@ node:
   # DB volume related settings
   volume:
     # Size of database volume
-    size: 300Gi
-    # ID of the EBS snapshot with Nethermind DB (for ex. snap-078ccc2fe56cb7abe). Leave empty if disabled
-    snapshot: snap-04c5e163d99c8bff8
+    size: 400Gi
+    # ID of the EBS snapshot with Nethermind DB (for ex. snap-078ccc2fe56cb7abe).
+    # snapshot: snap-04c5e163d99c8bff8
 
 # Add extra labels on pods and services
 #extraLabels:
 #  type: rpc
 
 didAuthProxy:
-  enabled: true
+  enabled: false
   replicaCount: 1
 
   image:
