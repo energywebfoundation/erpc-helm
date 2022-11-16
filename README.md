@@ -86,7 +86,7 @@ Run parametrized Helm install with:
 | node.pivotTotalDifficulty | string | `"5277779510943755568316940161266724959338720152"` | Total difficulty of the chain till specified block to start Fast Sync from |
 | node.volume.size | string | `"400Gi"` | Initial Nethermind DB persistent volume size. Size of the PVC storage could be extended with `kubectl edit` command for the specified PVC |
 | node.volume.snapshot | string | `""` | EBS snapshot ID to use for DB snapshot |
-| didAuthProxy.enabled | bool | `true` | Enable/Disable DID-Auth proxy for accessing Nethermind API |
+| didAuthProxy.enabled | bool | `false` | Enable/Disable DID-Auth proxy for accessing Nethermind API |
 | didAuthProxy.image.repository | string | `"public.ecr.aws/p2b6f2f9/did-auth"` | DID-Auth proxy container repository |
 | didAuthProxy.image.tag | string | `"latest"` | |
 | didAuthProxy.service.type | srting | `"ClusterIP"` | Service type of DID-Auth Proxy |
