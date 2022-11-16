@@ -18,7 +18,7 @@ kubectl:
   image:
     repository: bitnami/kubectl
     pullPolicy: IfNotPresent
-    tag: 1.21
+    tag: "1.21"
 
 imagePullSecrets: []
 nameOverride: ""
